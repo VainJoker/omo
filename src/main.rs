@@ -139,7 +139,7 @@ impl App {
                     .selected()
                     .expect("did not select any item"),
             )
-            .unwrap();
+            .expect("error when get selected_item");
         PathBuf::from(selected_item)
     }
 
@@ -181,9 +181,17 @@ impl Node {
                     .follow_links(true)
                     .sort_by_file_name()
                 {
-                    parent.push(entry.unwrap().file_name().to_os_string());
+                    match entry {
+                        Ok(entry) => parent.push(entry.file_name().to_os_string()),
+                        Err(_) => {}
+                    };
                 }
-                let c = OsString::from(self.current_path.file_name().clone().unwrap());
+                let c = OsString::from(
+                    self.current_path
+                        .file_name()
+                        .clone()
+                        .expect("get file_name error"),
+                );
                 self.tp.insert(c, parent);
             }
             None => {}
@@ -200,8 +208,13 @@ impl Node {
             .sort_by_file_name()
         {
             let mut child = child.clone();
-            let entry = entry.unwrap();
-            let path = entry.path();
+            let mut path = self.clone().current_path;
+            match &entry {
+                Ok(entry) => {
+                    path = entry.path().to_path_buf();
+                }
+                Err(_) => {}
+            };
             for child_entry in WalkDir::new(path)
                 .max_depth(1)
                 .min_depth(1)
@@ -210,23 +223,31 @@ impl Node {
             {
                 match child_entry {
                     Ok(c) => child.push(c.file_name().to_os_string()),
-                    Err(_) => {},
+                    Err(_) => {}
                 }
             }
-            self.tc.insert(entry.file_name().to_os_string(), child);
+            match &entry {
+                Ok(entry) => {
+                    let file_name = entry.file_name().to_os_string();
+                    self.tc.insert(file_name.to_os_string(), child);
+                }
+                Err(_) => {}
+            };
         }
     }
 
     fn set_current_path(&mut self) {
         let mut current_path = PathBuf::new();
-        let walker = WalkDir::new(current_dir().unwrap())
+        let walker = WalkDir::new(current_dir().expect("get current_dir error"))
             .max_depth(0)
             .follow_links(true)
             .sort_by_file_name()
             .into_iter();
         for entry in walker {
-            let a = entry.unwrap();
-            current_path = a.path().to_path_buf()
+            match entry {
+                Ok(entry) => current_path = entry.path().to_path_buf(),
+                Err(_) => {}
+            }
         }
         self.current_path = current_path;
     }
@@ -242,11 +263,15 @@ pub fn get_content(path: PathBuf) -> Vec<OsString> {
     let mut contents: Vec<OsString> = Vec::new();
     if Path::is_dir(&path) {
         for entry in walker {
-            let content = entry.unwrap();
-            contents.push(content.file_name().to_os_string());
+            match entry {
+                Ok(entry) => {
+                    let content = entry;
+                    contents.push(content.file_name().to_os_string());
+                }
+                Err(_) => {}
+            };
         }
     }
-    // println!("{:#?}",contents);
     contents
 }
 
@@ -309,21 +334,22 @@ where
         items = j
             .into_iter()
             .map(|i| {
-                let lines = vec![Spans::from(i.to_str().unwrap().to_owned())];
+                let lines = vec![Spans::from(
+                    i.to_str().expect("cant convert into str").to_owned(),
+                )];
                 // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
                 ListItem::new(lines).style(Style::default())
             })
             .collect();
     }
     // Create a List from all list items and highlight the currently selected one
-    let items = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Parent"));
-        // .highlight_style(
-        //     Style::default()
-        //         .bg(Color::LightBlue)
-        //         .add_modifier(Modifier::BOLD),
-        // )
-        // .highlight_symbol(">> ");
+    let items = List::new(items).block(Block::default().borders(Borders::ALL).title("Parent"));
+    // .highlight_style(
+    //     Style::default()
+    //         .bg(Color::LightBlue)
+    //         .add_modifier(Modifier::BOLD),
+    // )
+    // .highlight_symbol(">> ");
     // We can now render the item list
     f.render_widget(items, area);
 }
@@ -340,7 +366,9 @@ where
         .into_keys()
         .into_iter()
         .map(|i| {
-            let lines = vec![Spans::from(i.to_str().unwrap().to_owned())];
+            let lines = vec![Spans::from(
+                i.to_str().expect("cant convert into str").to_owned(),
+            )];
             // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
             ListItem::new(lines).style(Style::default())
         })
@@ -370,19 +398,20 @@ where
         let item: Vec<ListItem> = dir
             .iter()
             .map(|i| {
-                let lines = vec![Spans::from(i.to_str().unwrap().to_owned())];
+                let lines = vec![Spans::from(
+                    i.to_str().expect("cant convert into str").to_owned(),
+                )];
                 // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
                 ListItem::new(lines).style(Style::default())
             })
             .collect();
         // // let selected_dir = items.get(app.current_dir.state.selected().expect("aaa")).expect("bbb").clone();
-        let items = List::new(item)
-            .block(Block::default().borders(Borders::ALL).title("Child"));
-            // .highlight_style(
-            //     Style::default()
-            //         .bg(Color::LightBlue)
-            //         .add_modifier(Modifier::BOLD),
-            // );
+        let items = List::new(item).block(Block::default().borders(Borders::ALL).title("Child"));
+        // .highlight_style(
+        //     Style::default()
+        //         .bg(Color::LightBlue)
+        //         .add_modifier(Modifier::BOLD),
+        // );
         f.render_widget(items, area);
     } else {
         let preview =
@@ -422,6 +451,7 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                 KeyCode::Char('h') => {
                     if app.current.node.current_path
                         != home::home_dir().expect("user's home_dir not found")
+                        || app.current.node.current_path == Path::new("/root")
                     {
                         app = app.get_parapp();
                     }
