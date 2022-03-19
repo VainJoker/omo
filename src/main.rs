@@ -147,7 +147,6 @@ impl App {
         let mut path_origin = self.clone().current.node.current_path;
         let path_add = self.clone().which_is_selected();
         path_origin.push(path_add);
-        // println!("{:#?}",path_origin);
         path_origin
     }
 }
@@ -209,7 +208,10 @@ impl Node {
                 .follow_links(true)
                 .sort_by_file_name()
             {
-                child.push(child_entry.expect("wtf").file_name().to_os_string());
+                match child_entry {
+                    Ok(c) => child.push(c.file_name().to_os_string()),
+                    Err(_) => {},
+                }
             }
             self.tc.insert(entry.file_name().to_os_string(), child);
         }
@@ -308,19 +310,20 @@ where
             .into_iter()
             .map(|i| {
                 let lines = vec![Spans::from(i.to_str().unwrap().to_owned())];
-                ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
+                // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
+                ListItem::new(lines).style(Style::default())
             })
             .collect();
     }
     // Create a List from all list items and highlight the currently selected one
     let items = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Parent"))
-        .highlight_style(
-            Style::default()
-                .bg(Color::LightBlue)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol(">> ");
+        .block(Block::default().borders(Borders::ALL).title("Parent"));
+        // .highlight_style(
+        //     Style::default()
+        //         .bg(Color::LightBlue)
+        //         .add_modifier(Modifier::BOLD),
+        // )
+        // .highlight_symbol(">> ");
     // We can now render the item list
     f.render_widget(items, area);
 }
@@ -338,7 +341,8 @@ where
         .into_iter()
         .map(|i| {
             let lines = vec![Spans::from(i.to_str().unwrap().to_owned())];
-            ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
+            // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
+            ListItem::new(lines).style(Style::default())
         })
         .collect();
     // Create a List from all list items and highlight the currently selected one
@@ -346,7 +350,7 @@ where
         .block(Block::default().borders(Borders::ALL).title("Current"))
         .highlight_style(
             Style::default()
-                .bg(Color::LightBlue)
+                .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");
@@ -367,17 +371,18 @@ where
             .iter()
             .map(|i| {
                 let lines = vec![Spans::from(i.to_str().unwrap().to_owned())];
-                ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
+                // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
+                ListItem::new(lines).style(Style::default())
             })
             .collect();
         // // let selected_dir = items.get(app.current_dir.state.selected().expect("aaa")).expect("bbb").clone();
         let items = List::new(item)
-            .block(Block::default().borders(Borders::ALL).title("Child"))
-            .highlight_style(
-                Style::default()
-                    .bg(Color::LightBlue)
-                    .add_modifier(Modifier::BOLD),
-            );
+            .block(Block::default().borders(Borders::ALL).title("Child"));
+            // .highlight_style(
+            //     Style::default()
+            //         .bg(Color::LightBlue)
+            //         .add_modifier(Modifier::BOLD),
+            // );
         f.render_widget(items, area);
     } else {
         let preview =
