@@ -89,33 +89,31 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         Self {
-            // parent:Item::new().default(),
-            // child:Item::new().default(),
             current: Item::new().default(),
             show_popup: false,
         }
     }
     pub fn get_parapp(&mut self) -> Self {
-        // self.current.state.select(Some(0));
         let mut parent = Item::new();
-        parent.node.current_path = self
-            .current
-            .node
-            .current_path
-            .parent()
-            .unwrap()
-            .to_path_buf();
-        parent.node.set_tp();
-        parent.node.set_tc();
-        parent.state.select(Some(0));
-        Self {
-            current: parent,
-            show_popup: false,
+        match self.current.node.current_path.parent() {
+            Some(i) => {
+                parent.node.current_path = i.to_path_buf();
+                parent.node.set_tp();
+                parent.node.set_tc();
+                parent.state.select(Some(0));
+                Self {
+                    current: parent,
+                    show_popup: false,
+                }
+            }
+            None => Self {
+                current: self.clone().current,
+                show_popup: false,
+            },
         }
     }
     pub fn get_chiapp(&mut self) -> Self {
-        // self.current.state.select(Some(0));
-        if !get_content(self.current.node.current_path.clone()).is_empty() {
+        if !get_content(self.clone().get_child_path()).is_empty() {
             let mut child = Item::new();
             child.node.current_path = self.clone().get_child_path();
             child.node.set_tp();
@@ -135,9 +133,13 @@ impl App {
     pub fn which_is_selected(self) -> PathBuf {
         let items: Vec<OsString> = self.current.node.tc.into_keys().collect();
         let selected_item = items
-            .get(self.current.state.selected().expect("aaa"))
-            .expect("bbb")
-            .clone();
+            .get(
+                self.current
+                    .state
+                    .selected()
+                    .expect("did not select any item"),
+            )
+            .unwrap();
         PathBuf::from(selected_item)
     }
 
@@ -172,15 +174,21 @@ impl Node {
     pub fn set_tp(&mut self) {
         self.tp = BTreeMap::new();
         let mut parent: Vec<OsString> = Vec::new();
-        for entry in WalkDir::new(self.current_path.parent().unwrap())
-            .max_depth(1)
-            .min_depth(1)
-            .sort_by_file_name()
-        {
-            parent.push(entry.unwrap().file_name().to_os_string());
+        match self.current_path.parent() {
+            Some(i) => {
+                for entry in WalkDir::new(i)
+                    .max_depth(1)
+                    .min_depth(1)
+                    .follow_links(true)
+                    .sort_by_file_name()
+                {
+                    parent.push(entry.unwrap().file_name().to_os_string());
+                }
+                let c = OsString::from(self.current_path.file_name().clone().unwrap());
+                self.tp.insert(c, parent);
+            }
+            None => {}
         }
-        let c = OsString::from(self.current_path.file_name().clone().unwrap());
-        self.tp.insert(c, parent);
     }
 
     pub fn set_tc(&mut self) {
@@ -189,6 +197,7 @@ impl Node {
         for entry in WalkDir::new(self.current_path.clone())
             .max_depth(1)
             .min_depth(1)
+            .follow_links(true)
             .sort_by_file_name()
         {
             let mut child = child.clone();
@@ -197,9 +206,10 @@ impl Node {
             for child_entry in WalkDir::new(path)
                 .max_depth(1)
                 .min_depth(1)
+                .follow_links(true)
                 .sort_by_file_name()
             {
-                child.push(child_entry.unwrap().file_name().to_os_string());
+                child.push(child_entry.expect("wtf").file_name().to_os_string());
             }
             self.tc.insert(entry.file_name().to_os_string(), child);
         }
@@ -209,6 +219,7 @@ impl Node {
         let mut current_path = PathBuf::new();
         let walker = WalkDir::new(current_dir().unwrap())
             .max_depth(0)
+            .follow_links(true)
             .sort_by_file_name()
             .into_iter();
         for entry in walker {
@@ -223,6 +234,7 @@ pub fn get_content(path: PathBuf) -> Vec<OsString> {
     let walker = WalkDir::new(&path)
         .max_depth(1)
         .min_depth(1)
+        .follow_links(true)
         .sort_by_file_name()
         .into_iter();
     let mut contents: Vec<OsString> = Vec::new();
@@ -232,6 +244,7 @@ pub fn get_content(path: PathBuf) -> Vec<OsString> {
             contents.push(content.file_name().to_os_string());
         }
     }
+    // println!("{:#?}",contents);
     contents
 }
 
@@ -379,7 +392,7 @@ pub fn ui(app: App) -> Result<(), Box<dyn Error>> {
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    keymap(&mut terminal, app).unwrap();
+    keymap(&mut terminal, app).expect("keymap error");
     // restore terminal
     disable_raw_mode()?;
     execute!(
@@ -402,11 +415,13 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                 }
                 KeyCode::Char('p') => app.show_popup = !app.show_popup,
                 KeyCode::Char('h') => {
-                    // app.current_dir.unselect();
-                    app = app.get_parapp();
+                    if app.current.node.current_path
+                        != home::home_dir().expect("user's home_dir not found")
+                    {
+                        app = app.get_parapp();
+                    }
                 }
                 KeyCode::Char('l') => {
-                    // app.current_dir.unselect();
                     app = app.get_chiapp();
                 }
                 KeyCode::Char('j') => app.current.next(),
@@ -419,5 +434,5 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
 
 fn main() {
     let app = App::new();
-    ui(app).unwrap();
+    ui(app).expect("Can't draw the ui");
 }
