@@ -1,15 +1,15 @@
-use std::collections::BTreeMap;
-use std::env::current_dir;
-use std::error::Error;
-use std::ffi::OsString;
-use std::io;
-use std::path::{Path, PathBuf};
 use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use log::{debug, info, LevelFilter};
+use std::collections::BTreeMap;
+use std::env::current_dir;
+use std::error::Error;
+use std::ffi::OsString;
+use std::io;
+use std::path::{Path, PathBuf};
 use tui::backend::{Backend, CrosstermBackend};
 use tui::layout::{Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
@@ -33,7 +33,6 @@ pub struct Item {
 }
 
 impl Item {
-
     pub fn new() -> Self {
         Self {
             state: ListState::default(),
@@ -85,17 +84,36 @@ impl Item {
 }
 
 #[derive(Clone, Debug)]
+pub struct PopUp {
+    show_popup: bool,
+    input: String,
+    poptype: Poptype,
+}
+
+#[derive(Clone, Debug)]
+enum Poptype {
+    Search,
+    Create,
+    Delete,
+    Rename,
+    Init,
+}
+
+#[derive(Clone, Debug)]
 pub struct App {
     current: Item,
-    show_popup: bool,
+    popup: PopUp,
 }
 
 impl App {
-
     pub fn new() -> Self {
         Self {
             current: Item::new().default(),
-            show_popup: false,
+            popup: PopUp {
+                show_popup: false,
+                input: String::new(),
+                poptype: Poptype::Init,
+            },
         }
     }
 
@@ -123,32 +141,48 @@ impl App {
                 parent.state.select(Some(file_index));
                 Self {
                     current: parent,
-                    show_popup: false,
+                    popup: PopUp {
+                        show_popup: false,
+                        input: String::new(),
+                        poptype: Poptype::Init,
+                    },
                 }
             }
             None => Self {
                 current: self.clone().current,
-                show_popup: false,
+                popup: PopUp {
+                    show_popup: false,
+                    input: String::new(),
+                    poptype: Poptype::Init,
+                },
             },
         }
     }
 
     pub fn get_chiapp(&mut self) -> Self {
-        if !get_content(self.clone().get_child_path()).is_empty() {
+        if !get_content(self.clone().get_item_path()).is_empty() {
             let mut child = Item::new();
-            child.node.current_path = self.clone().get_child_path();
+            child.node.current_path = self.clone().get_item_path();
             child.node.set_tp();
             child.node.set_tc();
             let file_index: usize = 0;
             child.state.select(Some(file_index));
             Self {
                 current: child,
-                show_popup: false,
+                popup: PopUp {
+                    show_popup: false,
+                    input: String::new(),
+                    poptype: Poptype::Init,
+                },
             }
         } else {
             Self {
                 current: self.clone().current,
-                show_popup: false,
+                popup: PopUp {
+                    show_popup: false,
+                    input: String::new(),
+                    poptype: Poptype::Init,
+                },
             }
         }
     }
@@ -168,7 +202,7 @@ impl App {
         PathBuf::from(selected_item)
     }
 
-    pub fn get_child_path(self) -> PathBuf {
+    pub fn get_item_path(self) -> PathBuf {
         let mut path_origin = self.clone().current.node.current_path;
         let path_add = self.clone().which_is_selected();
         path_origin.push(path_add);
@@ -177,7 +211,6 @@ impl App {
 }
 
 impl Node {
-
     pub fn new() -> Self {
         Self {
             current_path: PathBuf::new(),
@@ -329,12 +362,6 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
 pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let size = f.size();
-    if app.show_popup {
-        let block = Block::default().title("PopUp").borders(Borders::ALL);
-        let area = centered_rect(60, 20, size);
-        f.render_widget(Clear, area); //this clears out the background
-        f.render_widget(block, area);
-    }
     let mainchunk = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(85), Constraint::Percentage(15)].as_ref())
@@ -354,6 +381,41 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     draw_curr(f, upsidechunk[1], app);
     draw_chil(f, upsidechunk[2], app);
     draw_logs(f, mainchunk[1]);
+    match app.popup.poptype {
+        Poptype::Search => {
+            if app.popup.show_popup {
+                let block = Block::default().title("Search").borders(Borders::ALL);
+                let area = centered_rect(30, 10, size);
+                f.render_widget(Clear, area); //this clears out the background
+                f.render_widget(block, area);
+            }
+        }
+        Poptype::Create => {
+            if app.popup.show_popup {
+                let block = Block::default().title("Create").borders(Borders::ALL);
+                let area = centered_rect(30, 10, size);
+                f.render_widget(Clear, area); //this clears out the background
+                f.render_widget(block, area);
+            }
+        }
+        Poptype::Delete => {
+            if app.popup.show_popup {
+                let block = Block::default().title("Delete").borders(Borders::ALL);
+                let area = centered_rect(30, 10, size);
+                f.render_widget(Clear, area); //this clears out the background
+                f.render_widget(block, area);
+            }
+        }
+        Poptype::Rename => {
+            if app.popup.show_popup {
+                let block = Block::default().title("Rename").borders(Borders::ALL);
+                let area = centered_rect(30, 10, size);
+                f.render_widget(Clear, area); //this clears out the background
+                f.render_widget(block, area);
+            }
+        }
+        Poptype::Init => {}
+    }
 }
 
 fn draw_pare<B>(f: &mut Frame<B>, area: Rect, app: &mut App)
@@ -410,7 +472,7 @@ fn draw_chil<B>(f: &mut Frame<B>, area: Rect, app: &mut App)
 where
     B: Backend,
 {
-    let child_path = app.clone().get_child_path();
+    let child_path = app.clone().get_item_path();
     //现在我们有了一个path,怎么获取path目录里的文件呢
     if Path::is_dir(&child_path) {
         let dir = get_content(child_path);
@@ -442,11 +504,7 @@ where
         .style_warn(Style::default().fg(Color::Yellow))
         .style_trace(Style::default().fg(Color::Gray))
         .style_info(Style::default().fg(Color::Cyan))
-        .block(
-            Block::default()
-                .title("Logs")
-                .borders(Borders::ALL),
-        );
+        .block(Block::default().title("Logs").borders(Borders::ALL));
     f.render_widget(log, area);
 }
 
@@ -472,36 +530,63 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
     loop {
         terminal.draw(|f| draw(f, &mut app))?;
         if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => {
-                    return Ok(());
-                }
-                KeyCode::Char('p') => app.show_popup = !app.show_popup,
-                KeyCode::Char('h') => {
-                    if app.current.node.current_path
-                        != home::home_dir().expect("user's home_dir not found")
-                        || app.current.node.current_path == Path::new("/root")
-                    {
-                        app = app.get_parapp();
-                        debug!("Current Path is {:#?}", app.current.node.current_path);
+            match app.popup.show_popup {
+                true => match key.code {
+                    KeyCode::Esc => {
+                        app.popup.show_popup = false;
                     }
-                }
-                KeyCode::Char('l') => {
-                    app = app.get_chiapp();
-                    debug!("Current Path is {:#?}", app.current.node.current_path);
-                }
-                KeyCode::Char('j') => {
-                    debug!("Next");
-
-                    app.current.next();
-                }
-                KeyCode::Char('k') => {
-                    debug!("Previous");
-
-                    app.current.previous();
-                }
-                _ => {}
-            }
+                    KeyCode::Enter => {
+                        app.popup.show_popup = false;
+                    }
+                    _ => {}
+                },
+                false => match key.code {
+                    KeyCode::Char('q') => {
+                        return Ok(());
+                    }
+                    KeyCode::Esc => {
+                        return Ok(());
+                    }
+                    KeyCode::Char('/') => {
+                        app.popup.poptype = Poptype::Search;
+                        app.popup.show_popup = !app.popup.show_popup;
+                    }
+                    KeyCode::Char('-') => {
+                        app.popup.poptype = Poptype::Delete;
+                        app.popup.show_popup = !app.popup.show_popup;
+                    }
+                    KeyCode::Char('+') => {
+                        app.popup.poptype = Poptype::Create;
+                        app.popup.show_popup = !app.popup.show_popup;
+                    }
+                    KeyCode::Char('R') => {
+                        app.popup.poptype = Poptype::Rename;
+                        app.popup.show_popup = !app.popup.show_popup;
+                    }
+                    KeyCode::Char('h') => {
+                        if app.current.node.current_path
+                            != home::home_dir().expect("user's home_dir not found")
+                            || app.current.node.current_path == Path::new("/root")
+                        {
+                            app = app.get_parapp();
+                            debug!("Current Path is {:#?}", app.clone().get_item_path());
+                        }
+                    }
+                    KeyCode::Char('l') => {
+                        app = app.get_chiapp();
+                        debug!("Current Path is {:#?}", app.clone().get_item_path());
+                    }
+                    KeyCode::Char('j') => {
+                        app.current.next();
+                        debug!("Current Path is {:#?}", app.clone().get_item_path());
+                    }
+                    KeyCode::Char('k') => {
+                        app.current.previous();
+                        debug!("Current Path is {:#?}", app.clone().get_item_path());
+                    }
+                    _ => {}
+                },
+            };
         }
     }
 }
