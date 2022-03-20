@@ -9,11 +9,13 @@ edition = "2021"
 walkdir = "2"
 tui = "*"
 crossterm = "*"
-# tokio = {version = "*",features = ["full"]}
 home = "0.5.3"
+log = "*"
+tui-logger = "*"
+# tokio = {version = "*",features = ["full"]}
 
-# [profile.release]
-# opt-level = 'z'
-# lto = true
-# codegen-units = 1
-# panic = 'abort'
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'

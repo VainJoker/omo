@@ -1,23 +1,22 @@
+use std::collections::BTreeMap;
+use std::env::current_dir;
+use std::error::Error;
+use std::ffi::OsString;
+use std::io;
+use std::path::{Path, PathBuf};
 use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use std::error::Error;
-use std::io;
-use std::path::Path;
-use std::{collections::BTreeMap, env::current_dir, ffi::OsString, path::PathBuf};
-use tui::backend::CrosstermBackend;
-use tui::widgets::ListState;
-use tui::Terminal;
-use tui::{
-    backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::Spans,
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph},
-    Frame,
-};
+use log::{debug, info, LevelFilter};
+use tui::backend::{Backend, CrosstermBackend};
+use tui::layout::{Constraint, Direction, Layout, Rect};
+use tui::style::{Color, Modifier, Style};
+use tui::text::Spans;
+use tui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph};
+use tui::{Frame, Terminal};
+use tui_logger::TuiLoggerWidget;
 use walkdir::WalkDir;
 
 #[derive(Clone, Debug)]
@@ -34,19 +33,23 @@ pub struct Item {
 }
 
 impl Item {
+
     pub fn new() -> Self {
         Self {
             state: ListState::default(),
             node: Node::new(),
         }
     }
+
     pub fn default(mut self) -> Self {
         self.state.select(Some(0));
+
         Self {
             node: self.node.default(),
             state: self.state,
         }
     }
+
     pub fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
@@ -58,6 +61,7 @@ impl Item {
             }
             None => 0,
         };
+
         self.state.select(Some(i));
     }
 
@@ -87,12 +91,14 @@ pub struct App {
 }
 
 impl App {
+
     pub fn new() -> Self {
         Self {
             current: Item::new().default(),
             show_popup: false,
         }
     }
+
     pub fn get_parapp(&mut self) -> Self {
         let mut parent = Item::new();
         match self.current.node.current_path.parent() {
@@ -126,6 +132,7 @@ impl App {
             },
         }
     }
+
     pub fn get_chiapp(&mut self) -> Self {
         if !get_content(self.clone().get_child_path()).is_empty() {
             let mut child = Item::new();
@@ -145,6 +152,7 @@ impl App {
             }
         }
     }
+
     pub fn which_is_selected(self) -> PathBuf {
         let items: Vec<OsString> = self.current.node.tc.into_keys().collect();
         let mut selected_item = &OsString::new();
@@ -169,6 +177,7 @@ impl App {
 }
 
 impl Node {
+
     pub fn new() -> Self {
         Self {
             current_path: PathBuf::new(),
@@ -176,6 +185,7 @@ impl Node {
             tp: BTreeMap::new(),
         }
     }
+
     pub fn default(&mut self) -> Self {
         self.set_current_path();
         self.set_tp();
@@ -325,7 +335,11 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         f.render_widget(Clear, area); //this clears out the background
         f.render_widget(block, area);
     }
-    let chunks = Layout::default()
+    let mainchunk = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(85), Constraint::Percentage(15)].as_ref())
+        .split(f.size());
+    let upsidechunk = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(
             [
@@ -335,10 +349,11 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             ]
             .as_ref(),
         )
-        .split(f.size());
-    draw_pare(f, chunks[0], app);
-    draw_curr(f, chunks[1], app);
-    draw_chil(f, chunks[2], app);
+        .split(mainchunk[0]);
+    draw_pare(f, upsidechunk[0], app);
+    draw_curr(f, upsidechunk[1], app);
+    draw_chil(f, upsidechunk[2], app);
+    draw_logs(f, mainchunk[1]);
 }
 
 fn draw_pare<B>(f: &mut Frame<B>, area: Rect, app: &mut App)
@@ -354,20 +369,11 @@ where
                 let lines = vec![Spans::from(
                     i.to_str().expect("cant convert into str").to_owned(),
                 )];
-                // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
                 ListItem::new(lines).style(Style::default())
             })
             .collect();
     }
-    // Create a List from all list items and highlight the currently selected one
     let items = List::new(items).block(Block::default().borders(Borders::ALL).title("Parent"));
-    // .highlight_style(
-    //     Style::default()
-    //         .bg(Color::LightBlue)
-    //         .add_modifier(Modifier::BOLD),
-    // )
-    // .highlight_symbol(">> ");
-    // We can now render the item list
     f.render_widget(items, area);
 }
 
@@ -386,11 +392,9 @@ where
             let lines = vec![Spans::from(
                 i.to_str().expect("cant convert into str").to_owned(),
             )];
-            // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
             ListItem::new(lines).style(Style::default())
         })
         .collect();
-    // Create a List from all list items and highlight the currently selected one
     let items = List::new(items)
         .block(Block::default().borders(Borders::ALL).title("Current"))
         .highlight_style(
@@ -399,7 +403,6 @@ where
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");
-    // We can now render the item list
     f.render_stateful_widget(items, area, &mut app.current.state);
 }
 
@@ -411,30 +414,40 @@ where
     //现在我们有了一个path,怎么获取path目录里的文件呢
     if Path::is_dir(&child_path) {
         let dir = get_content(child_path);
-        // // Iterate through all elements in the `items` app and append some debug text to it.
         let item: Vec<ListItem> = dir
             .iter()
             .map(|i| {
                 let lines = vec![Spans::from(
                     i.to_str().expect("cant convert into str").to_owned(),
                 )];
-                // ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::DarkGray))
                 ListItem::new(lines).style(Style::default())
             })
             .collect();
-        // // let selected_dir = items.get(app.current_dir.state.selected().expect("aaa")).expect("bbb").clone();
         let items = List::new(item).block(Block::default().borders(Borders::ALL).title("Child"));
-        // .highlight_style(
-        //     Style::default()
-        //         .bg(Color::LightBlue)
-        //         .add_modifier(Modifier::BOLD),
-        // );
         f.render_widget(items, area);
     } else {
         let preview =
             Paragraph::new("Preview").block(Block::default().borders(Borders::ALL).title("Child"));
         f.render_widget(preview, area);
     }
+}
+
+fn draw_logs<B>(f: &mut Frame<B>, area: Rect)
+where
+    B: Backend,
+{
+    let log = TuiLoggerWidget::default()
+        .style_error(Style::default().fg(Color::Red))
+        .style_debug(Style::default().fg(Color::Blue))
+        .style_warn(Style::default().fg(Color::Yellow))
+        .style_trace(Style::default().fg(Color::Gray))
+        .style_info(Style::default().fg(Color::Cyan))
+        .block(
+            Block::default()
+                .title("Logs")
+                .borders(Borders::ALL),
+        );
+    f.render_widget(log, area);
 }
 
 pub fn ui(app: App) -> Result<(), Box<dyn Error>> {
@@ -444,7 +457,6 @@ pub fn ui(app: App) -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
     keymap(&mut terminal, app).expect("keymap error");
-    // restore terminal
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -471,13 +483,23 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                         || app.current.node.current_path == Path::new("/root")
                     {
                         app = app.get_parapp();
+                        debug!("Current Path is {:#?}", app.current.node.current_path);
                     }
                 }
                 KeyCode::Char('l') => {
                     app = app.get_chiapp();
+                    debug!("Current Path is {:#?}", app.current.node.current_path);
                 }
-                KeyCode::Char('j') => app.current.next(),
-                KeyCode::Char('k') => app.current.previous(),
+                KeyCode::Char('j') => {
+                    debug!("Next");
+
+                    app.current.next();
+                }
+                KeyCode::Char('k') => {
+                    debug!("Previous");
+
+                    app.current.previous();
+                }
                 _ => {}
             }
         }
@@ -485,6 +507,9 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
 }
 
 fn main() {
+    tui_logger::init_logger(LevelFilter::Debug).unwrap();
+    tui_logger::set_default_level(log::LevelFilter::Debug);
     let app = App::new();
+    info!("Welcome 2 OMO !!!\n");
     ui(app).expect("Can't draw the ui");
 }
