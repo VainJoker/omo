@@ -90,6 +90,7 @@ pub struct PopUp {
     poptype: Poptype,
 }
 
+// 为popup划分类型,由于需要所有弹出式消息共用一个窗口，用来分类处理
 #[derive(Clone, Debug)]
 enum Poptype {
     Search,
@@ -99,6 +100,7 @@ enum Poptype {
     Init,
 }
 
+// App 三个文件窗口,一个log窗口，一个popup窗口
 #[derive(Clone, Debug)]
 pub struct App {
     current: Item,
@@ -117,6 +119,7 @@ impl App {
         }
     }
 
+    //移动逻辑
     pub fn get_parapp(&mut self) -> Self {
         let mut parent = Item::new();
         match self.current.node.current_path.parent() {
@@ -159,7 +162,9 @@ impl App {
         }
     }
 
+    //移动逻辑
     pub fn get_chiapp(&mut self) -> Self {
+        //如果是空文件夹不许移动
         if !get_content(self.clone().get_item_path()).is_empty() {
             let mut child = Item::new();
             child.node.current_path = self.clone().get_item_path();
@@ -186,7 +191,13 @@ impl App {
             }
         }
     }
+    //通过移动当前路径，获取目录
+    //对于当前路径，非根，父路径有且仅有一个,然而父目录的兄弟目录都需要读取,所以设置node的toparent（tp）这个BTreeMap为一个string对应一个vec
+    //至于子目录，是一个多对多的关系，当前路径下有许多文件夹，许多的item,我需要把所有item的子文件夹存起来，所以设置node的tochild（tc）这个BTreeMap为一个vec对应一个vec
+    //因为这导致当存在许多的条目时，会造成略微卡顿情况
+    //todo!需要处理
 
+    //获取被选中的条目
     pub fn which_is_selected(self) -> PathBuf {
         let items: Vec<OsString> = self.current.node.tc.into_keys().collect();
         let mut selected_item = &OsString::new();
@@ -202,6 +213,7 @@ impl App {
         PathBuf::from(selected_item)
     }
 
+    //获取被选中的目录的路径
     pub fn get_item_path(self) -> PathBuf {
         let mut path_origin = self.clone().current.node.current_path;
         let path_add = self.clone().which_is_selected();
@@ -230,6 +242,7 @@ impl Node {
         }
     }
 
+    //存入parent路径下的所有目录
     pub fn set_tp(&mut self) {
         self.tp = BTreeMap::new();
         let mut parent: Vec<OsString> = Vec::new();
@@ -258,6 +271,9 @@ impl Node {
         }
     }
 
+    //存入当前路径下所有子文件对应的孙子文件
+    //此处，链接的文件会消失,错误处理需要更改
+    //todo！
     pub fn set_tc(&mut self) {
         self.tc = BTreeMap::new();
         let child: Vec<OsString> = Vec::new();
@@ -273,6 +289,7 @@ impl Node {
                 Ok(entry) => {
                     path = entry.path().to_path_buf();
                 }
+                //应该问题处在这
                 Err(_) => {}
             };
             for child_entry in WalkDir::new(path)
@@ -283,6 +300,7 @@ impl Node {
             {
                 match child_entry {
                     Ok(c) => child.push(c.file_name().to_os_string()),
+                    //或者这
                     Err(_) => {}
                 }
             }
@@ -313,6 +331,7 @@ impl Node {
     }
 }
 
+//获取当前路径的子文件夹所有的内容
 pub fn get_content(path: PathBuf) -> Vec<OsString> {
     let walker = WalkDir::new(&path)
         .max_depth(1)
@@ -334,7 +353,7 @@ pub fn get_content(path: PathBuf) -> Vec<OsString> {
     }
     contents
 }
-
+//居中处理popup
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -360,6 +379,7 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+//tui绘制界面
 pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let size = f.size();
     let mainchunk = Layout::default()
@@ -377,10 +397,15 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             .as_ref(),
         )
         .split(mainchunk[0]);
+    //父文件夹
     draw_pare(f, upsidechunk[0], app);
+    //当前文件夹
     draw_curr(f, upsidechunk[1], app);
+    //子文件夹
     draw_chil(f, upsidechunk[2], app);
+    //log
     draw_logs(f, mainchunk[1]);
+    //处理popup对应的事件，可变成函数单独拎出来
     match app.popup.poptype {
         Poptype::Search => {
             if app.popup.show_popup {
@@ -423,7 +448,13 @@ where
     B: Backend,
 {
     let mut items: Vec<ListItem> = Vec::new();
-    let items_a = app.clone().current.node.tp.into_values().into_iter();
+    let items_a = app
+        .clone()
+        .current
+        .node
+        .tp
+        .into_values()
+        .into_iter();
     for j in items_a {
         items = j
             .into_iter()
@@ -508,6 +539,7 @@ where
     f.render_widget(log, area);
 }
 
+//运行起来了
 pub fn ui(app: App) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -525,6 +557,7 @@ pub fn ui(app: App) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+//按键绑定
 pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()> {
     let mut app = app.clone();
     loop {
@@ -596,5 +629,5 @@ fn main() {
     tui_logger::set_default_level(log::LevelFilter::Debug);
     let app = App::new();
     info!("Welcome 2 OMO !!!\n");
-    ui(app).expect("Can't draw the ui");
+    ui(app).expect("Can't draw the app");
 }
