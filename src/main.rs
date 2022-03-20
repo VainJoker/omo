@@ -100,7 +100,21 @@ impl App {
                 parent.node.current_path = i.to_path_buf();
                 parent.node.set_tp();
                 parent.node.set_tc();
-                parent.state.select(Some(0));
+                let mut file_index: usize = 0;
+                match self.current.node.current_path.file_name() {
+                    Some(j) => {
+                        file_index = self
+                            .current
+                            .node
+                            .tp
+                            .get(j)
+                            .unwrap()
+                            .binary_search(&j.to_os_string())
+                            .unwrap();
+                    }
+                    None => {}
+                };
+                parent.state.select(Some(file_index));
                 Self {
                     current: parent,
                     show_popup: false,
