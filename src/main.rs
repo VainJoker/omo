@@ -132,7 +132,8 @@ impl App {
             child.node.current_path = self.clone().get_child_path();
             child.node.set_tp();
             child.node.set_tc();
-            child.state.select(Some(0));
+            let file_index: usize = 0;
+            child.state.select(Some(file_index));
             Self {
                 current: child,
                 show_popup: false,
@@ -146,14 +147,16 @@ impl App {
     }
     pub fn which_is_selected(self) -> PathBuf {
         let items: Vec<OsString> = self.current.node.tc.into_keys().collect();
-        let selected_item = items
-            .get(
-                self.current
-                    .state
-                    .selected()
-                    .expect("did not select any item"),
-            )
-            .expect("error when get selected_item");
+        let mut selected_item = &OsString::new();
+        match self.current.state.selected() {
+            Some(i) => match items.get(i) {
+                Some(j) => {
+                    selected_item = j;
+                }
+                None => {}
+            },
+            None => {}
+        };
         PathBuf::from(selected_item)
     }
 
