@@ -17,6 +17,7 @@ use tui::text::Spans;
 use tui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph};
 use tui::{Frame, Terminal};
 use tui_logger::TuiLoggerWidget;
+use unicode_width::UnicodeWidthStr;
 use walkdir::WalkDir;
 
 #[derive(Clone, Debug)]
@@ -88,6 +89,7 @@ pub struct PopUp {
     show_popup: bool,
     input: String,
     poptype: Poptype,
+    messages: Vec<String>,
 }
 
 // 为popup划分类型,由于需要所有弹出式消息共用一个窗口，用来分类处理
@@ -98,6 +100,17 @@ enum Poptype {
     Delete,
     Rename,
     Init,
+}
+
+impl Default for PopUp {
+    fn default() -> PopUp {
+        PopUp {
+            input: String::new(),
+            messages: Vec::new(),
+            show_popup: false,
+            poptype: Poptype::Init,
+        }
+    }
 }
 
 // App 三个文件窗口,一个log窗口，一个popup窗口
@@ -111,11 +124,7 @@ impl App {
     pub fn new() -> Self {
         Self {
             current: Item::new().default(),
-            popup: PopUp {
-                show_popup: false,
-                input: String::new(),
-                poptype: Poptype::Init,
-            },
+            popup: PopUp::default(),
         }
     }
 
@@ -144,20 +153,12 @@ impl App {
                 parent.state.select(Some(file_index));
                 Self {
                     current: parent,
-                    popup: PopUp {
-                        show_popup: false,
-                        input: String::new(),
-                        poptype: Poptype::Init,
-                    },
+                    popup: PopUp::default(),
                 }
             }
             None => Self {
                 current: self.clone().current,
-                popup: PopUp {
-                    show_popup: false,
-                    input: String::new(),
-                    poptype: Poptype::Init,
-                },
+                popup: PopUp::default(),
             },
         }
     }
@@ -174,20 +175,12 @@ impl App {
             child.state.select(Some(file_index));
             Self {
                 current: child,
-                popup: PopUp {
-                    show_popup: false,
-                    input: String::new(),
-                    poptype: Poptype::Init,
-                },
+                popup: PopUp::default(),
             }
         } else {
             Self {
                 current: self.clone().current,
-                popup: PopUp {
-                    show_popup: false,
-                    input: String::new(),
-                    poptype: Poptype::Init,
-                },
+                popup: PopUp::default(),
             }
         }
     }
@@ -381,7 +374,6 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
 //tui绘制界面
 pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
-    let size = f.size();
     let mainchunk = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(85), Constraint::Percentage(15)].as_ref())
@@ -405,41 +397,45 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     draw_chil(f, upsidechunk[2], app);
     //log
     draw_logs(f, mainchunk[1]);
+    //pop
+    draw_pop(f, app);
+}
+
+fn draw_pop<B>(f: &mut Frame<B>, app: &mut App)
+where
+    B: Backend,
+{
     //处理popup对应的事件，可变成函数单独拎出来
     match app.popup.poptype {
-        Poptype::Search => {
-            if app.popup.show_popup {
-                let block = Block::default().title("Search").borders(Borders::ALL);
-                let area = centered_rect(30, 10, size);
-                f.render_widget(Clear, area); //this clears out the background
-                f.render_widget(block, area);
-            }
-        }
-        Poptype::Create => {
-            if app.popup.show_popup {
-                let block = Block::default().title("Create").borders(Borders::ALL);
-                let area = centered_rect(30, 10, size);
-                f.render_widget(Clear, area); //this clears out the background
-                f.render_widget(block, area);
-            }
-        }
-        Poptype::Delete => {
-            if app.popup.show_popup {
-                let block = Block::default().title("Delete").borders(Borders::ALL);
-                let area = centered_rect(30, 10, size);
-                f.render_widget(Clear, area); //this clears out the background
-                f.render_widget(block, area);
-            }
-        }
-        Poptype::Rename => {
-            if app.popup.show_popup {
-                let block = Block::default().title("Rename").borders(Borders::ALL);
-                let area = centered_rect(30, 10, size);
-                f.render_widget(Clear, area); //this clears out the background
-                f.render_widget(block, area);
-            }
-        }
+        Poptype::Search => print_pop(f, app, String::from("Input Which you want to search")),
+        Poptype::Create => print_pop(
+            f,
+            app,
+            String::from("Input the name which you want to create"),
+        ),
+        Poptype::Delete => print_pop(f, app, String::from("Input Y to delete")),
+        Poptype::Rename => print_pop(f, app, String::from("Input the name you want to rename")),
         Poptype::Init => {}
+    }
+}
+
+fn print_pop<B>(f: &mut Frame<B>, app: &mut App, title: String)
+where
+    B: Backend,
+{
+    if app.popup.show_popup {
+        let area = centered_rect(30, 10, f.size());
+        f.render_widget(Clear, area); //this clears out the background
+        let input = Paragraph::new(app.popup.input.as_ref())
+            .style(Style::default().fg(Color::DarkGray))
+            .block(Block::default().borders(Borders::ALL).title(title));
+        f.render_widget(input, area);
+        f.set_cursor(
+            // Put cursor past the end of the input text
+            area.x + app.popup.input.width() as u16 + 1,
+            // Move one line down, from the border to the input line
+            area.y + 1,
+        );
     }
 }
 
@@ -448,13 +444,7 @@ where
     B: Backend,
 {
     let mut items: Vec<ListItem> = Vec::new();
-    let items_a = app
-        .clone()
-        .current
-        .node
-        .tp
-        .into_values()
-        .into_iter();
+    let items_a = app.clone().current.node.tp.into_values().into_iter();
     for j in items_a {
         items = j
             .into_iter()
@@ -569,7 +559,13 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                         app.popup.show_popup = false;
                     }
                     KeyCode::Enter => {
-                        app.popup.show_popup = false;
+                        app.popup.messages.push(app.popup.input.drain(..).collect());
+                    }
+                    KeyCode::Char(c) => {
+                        app.popup.input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        app.popup.input.pop();
                     }
                     _ => {}
                 },

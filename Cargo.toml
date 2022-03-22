@@ -13,6 +13,8 @@ home = "0.5.3"
 log = "*"
 tui-logger = "*"
 # tokio = {version = "*",features = ["full"]}
+unicode-segmentation = "1.2"
+unicode-width = "0.1"
 
 [profile.release]
 opt-level = 'z'
