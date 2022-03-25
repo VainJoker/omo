@@ -9,10 +9,12 @@ pub mod node;
 pub mod pop;
 pub mod ui;
 pub mod util;
-fn main() {
+
+#[tokio::main]
+async fn main() {
     tui_logger::init_logger(LevelFilter::Debug).unwrap();
     tui_logger::set_default_level(LevelFilter::Debug);
-    let app = App::new();
+    let app = App::new().await;
     info!("Welcome 2 OMO !!!\n");
-    run(app).expect("Can't draw the app");
+    run(app).await.expect("Can't draw the app");
 }

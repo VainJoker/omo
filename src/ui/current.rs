@@ -11,10 +11,10 @@ where
     B: Backend,
 {
     let items: Vec<ListItem> = app
-        .clone()
         .current
         .node
         .tc
+        .clone()
         .into_keys()
         .into_iter()
         .map(|i| {

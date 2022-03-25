@@ -27,3 +27,10 @@ pub fn get_content(path: PathBuf) -> Vec<OsString> {
     }
     contents
 }
+pub fn create_file() {}
+
+pub fn create_directory() {}
+
+pub fn delete_item() {}
+
+pub fn rename_item() {}

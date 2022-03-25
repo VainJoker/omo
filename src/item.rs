@@ -16,11 +16,11 @@ impl Item {
         }
     }
 
-    pub fn default(mut self) -> Self {
+    pub async fn default(mut self) -> Self {
         self.state.select(Some(0));
 
         Self {
-            node: self.node.default(),
+            node: self.node.default().await,
             state: self.state,
         }
     }

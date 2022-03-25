@@ -54,13 +54,13 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
 }
 
 //运行起来了
-pub fn run(app: App) -> Result<(), Box<dyn Error>> {
+pub async fn run(app: App) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    keymap(&mut terminal, app).expect("keymap error");
+    keymap(&mut terminal, app).await.unwrap();
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),

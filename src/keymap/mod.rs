@@ -6,7 +6,7 @@ use tui::{backend::Backend, Terminal};
 
 use crate::{app::App, pop::Poptype, ui::draw};
 //按键绑定
-pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()> {
+pub async fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()> {
     let mut app = app.clone();
     loop {
         terminal.draw(|f| draw(f, &mut app))?;
@@ -55,12 +55,12 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                             != home::home_dir().expect("user's home_dir not found")
                             || app.current.node.current_path == Path::new("/root")
                         {
-                            app = app.get_parapp();
+                            app = app.get_parapp().await;
                             debug!("Current Path is {:#?}", app.clone().get_item_path());
                         }
                     }
                     KeyCode::Char('l') => {
-                        app = app.get_chiapp();
+                        app = app.get_chiapp().await;
                         debug!("Current Path is {:#?}", app.clone().get_item_path());
                     }
                     KeyCode::Char('j') => {

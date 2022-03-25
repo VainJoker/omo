@@ -11,7 +11,7 @@ where
     B: Backend,
 {
     let mut items: Vec<ListItem> = Vec::new();
-    let items_a = app.clone().current.node.tp.into_values().into_iter();
+    let items_a = app.current.node.tp.clone().into_values().into_iter();
     for j in items_a {
         items = j
             .into_iter()
