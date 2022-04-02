@@ -18,10 +18,10 @@ impl Node {
         }
     }
 
-    pub async fn default(&mut self) -> Self {
+    pub fn default(&mut self) -> Self {
         self.set_current_path();
-        self.set_tp().await;
-        self.set_tc().await;
+        self.set_tp();
+        self.set_tc();
         Self {
             current_path: self.to_owned().current_path,
             tc: self.to_owned().tc,
@@ -30,7 +30,7 @@ impl Node {
     }
 
     //存入parent路径下的所有目录
-    pub async fn set_tp(&mut self) {
+    pub fn set_tp(&mut self) {
         self.tp = BTreeMap::new();
         let mut parent: Vec<OsString> = Vec::new();
         match self.current_path.parent() {
@@ -61,7 +61,7 @@ impl Node {
     //存入当前路径下所有子文件对应的孙子文件
     //此处，链接的文件会消失,错误处理需要更改
     //todo！
-    pub async fn set_tc(&mut self) {
+    pub fn set_tc(&mut self) {
         self.tc = BTreeMap::new();
         let child: Vec<OsString> = Vec::new();
         for entry in WalkDir::new(self.current_path.clone())

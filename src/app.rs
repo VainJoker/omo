@@ -1,6 +1,5 @@
 use crate::item::Item;
 use crate::pop::PopUp;
-use crate::util::get_content;
 use std::ffi::OsString;
 use std::path::PathBuf;
 // App 三个文件窗口,一个log窗口，一个popup窗口
@@ -11,21 +10,21 @@ pub struct App {
 }
 
 impl App {
-    pub async fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            current: Item::new().default().await,
+            current: Item::new().default(),
             popup: PopUp::default(),
         }
     }
 
     //移动逻辑
-    pub async fn get_parapp(&mut self) -> Self {
+    pub fn get_parapp(&mut self) -> Self {
         let mut parent = Item::new();
         match self.current.node.current_path.parent() {
             Some(i) => {
                 parent.node.current_path = i.to_path_buf();
-                parent.node.set_tp().await;
-                parent.node.set_tc().await;
+                parent.node.set_tp();
+                parent.node.set_tc();
                 let mut file_index: usize = 0;
                 match self.current.node.current_path.file_name() {
                     Some(j) => {
@@ -54,22 +53,21 @@ impl App {
     }
 
     //移动逻辑
-    pub async fn get_chiapp(&mut self) -> Self {
-        //如果是空文件夹不许移动
-        if !get_content(self.clone().get_item_path()).is_empty() {
+    pub fn get_chiapp(&mut self) -> Self {
+        if std::path::Path::is_file(&self.clone().get_item_path()){
+            Self {
+                current: self.clone().current,
+                popup: PopUp::default(),
+            }
+        }else {
             let mut child = Item::new();
             child.node.current_path = self.clone().get_item_path();
-            child.node.set_tp().await;
-            child.node.set_tc().await;
+            child.node.set_tp();
+            child.node.set_tc();
             let file_index: usize = 0;
             child.state.select(Some(file_index));
             Self {
                 current: child,
-                popup: PopUp::default(),
-            }
-        } else {
-            Self {
-                current: self.clone().current,
                 popup: PopUp::default(),
             }
         }
@@ -103,4 +101,5 @@ impl App {
         path_origin.push(path_add);
         path_origin
     }
+
 }

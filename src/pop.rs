@@ -3,7 +3,7 @@ pub struct PopUp {
     pub show_popup: bool,
     pub input: String,
     pub poptype: Poptype,
-    pub messages: Vec<String>,
+    pub message: String,
 }
 
 // 为popup划分类型,由于需要所有弹出式消息共用一个窗口，用来分类处理
@@ -20,7 +20,7 @@ impl Default for PopUp {
     fn default() -> PopUp {
         PopUp {
             input: String::new(),
-            messages: Vec::new(),
+            message: String::new(),
             show_popup: false,
             poptype: Poptype::Init,
         }

@@ -52,15 +52,42 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     //pop
     draw_pop(f, app);
 }
+pub fn refresh<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+    let mainchunk = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(85), Constraint::Percentage(15)].as_ref())
+        .split(f.size());
+    let upsidechunk = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage(20),
+                Constraint::Percentage(30),
+                Constraint::Percentage(50),
+            ]
+            .as_ref(),
+        )
+        .split(mainchunk[0]);
+    //父文件夹
+    draw_pare(f, upsidechunk[0], app);
+    //当前文件夹
+    draw_curr(f, upsidechunk[1], app);
+    //子文件夹
+    draw_chil(f, upsidechunk[2], app);
+    //log
+    draw_logs(f, mainchunk[1]);
+    //pop
+    draw_pop(f, app);
+}
 
 //运行起来了
-pub async fn run(app: App) -> Result<(), Box<dyn Error>> {
+pub fn run(app: App) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    keymap(&mut terminal, app).await.unwrap();
+    keymap(&mut terminal, app).unwrap();
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
