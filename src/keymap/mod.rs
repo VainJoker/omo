@@ -29,6 +29,7 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                     fs::create_dir(create_dir_name).unwrap();
                                     app.current.node.set_tc();
                                 }
+                                //输入几个字符去匹配
                                 Poptype::Search => {
                                     let search_name = app.popup.message.clone();
                                     let items: Vec<OsString> =
@@ -41,7 +42,38 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                         debug!("Do not have the item,search again")
                                     }
                                 }
-                                Poptype::Delete => {}
+                                Poptype::Delete => {
+                                    if app.popup.message.clone() == "Y" {
+                                        std::fs::remove_dir_all(app.clone().get_item_path())
+                                            .unwrap();
+                                        debug!(
+                                            "you have delete {:#?}",
+                                            app.clone().which_is_selected()
+                                        );
+                                        app.current.node.set_tc();
+                                    } else if app.popup.message.clone() == "N" {
+                                        app.popup.show_popup = false;
+                                    } else {
+                                        debug!("you have input wrong")
+                                    }
+                                }
+                                Poptype::Rename => {
+                                    let rename_name = app.popup.message.clone();
+                                    std::fs::rename(
+                                        app.clone().get_item_path(),
+                                        app.clone()
+                                            .get_item_path()
+                                            .parent()
+                                            .unwrap()
+                                            .to_str()
+                                            .unwrap()
+                                            .to_owned()
+                                            + "/"
+                                            + &rename_name,
+                                    )
+                                    .unwrap();
+                                    app.current.node.set_tc();
+                                }
                                 _ => {}
                             }
                             app.popup.input.clear();
