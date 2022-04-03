@@ -39,11 +39,7 @@ where
     //处理popup对应的事件，可变成函数单独拎出来
     match app.popup.poptype {
         Poptype::Search => print_pop(f, app, String::from("Input Which you want to search")),
-        Poptype::Create => print_pop(
-            f,
-            app,
-            String::from("Input the name which you want to create"),
-        ),
+        Poptype::Create => print_pop(f, app, String::from("Input which you want to create")),
         Poptype::Delete => print_pop(f, app, String::from("Input Y to delete")),
         Poptype::Rename => print_pop(f, app, String::from("Input the name you want to rename")),
         Poptype::Init => {}

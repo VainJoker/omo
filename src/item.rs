@@ -60,7 +60,4 @@ impl Item {
     pub fn unselect(&mut self) {
         self.state.select(None);
     }
-
-
 }
-

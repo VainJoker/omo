@@ -54,12 +54,12 @@ impl App {
 
     //移动逻辑
     pub fn get_chiapp(&mut self) -> Self {
-        if std::path::Path::is_file(&self.clone().get_item_path()){
+        if std::path::Path::is_file(&self.clone().get_item_path()) {
             Self {
                 current: self.clone().current,
                 popup: PopUp::default(),
             }
-        }else {
+        } else {
             let mut child = Item::new();
             child.node.current_path = self.clone().get_item_path();
             child.node.set_tp();
@@ -101,5 +101,4 @@ impl App {
         path_origin.push(path_add);
         path_origin
     }
-
 }

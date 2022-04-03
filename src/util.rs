@@ -28,7 +28,7 @@ pub fn get_content(path: PathBuf) -> Vec<OsString> {
     contents
 }
 
-pub fn get_child_content(path: PathBuf) -> Vec<OsString>{
+pub fn get_child_content(path: PathBuf) -> Vec<OsString> {
     let walker = WalkDir::new(&path)
         .max_depth(2)
         .min_depth(1)
