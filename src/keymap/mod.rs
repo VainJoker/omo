@@ -1,7 +1,7 @@
 use std::{
     ffi::OsString,
     fs, io,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use crossterm::event::{self, Event, KeyCode};
