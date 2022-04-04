@@ -28,8 +28,12 @@ where
         let items = List::new(item).block(Block::default().borders(Borders::ALL).title("Child"));
         f.render_widget(items, area);
     } else {
+        let contents = match std::fs::read_to_string(child_path) {
+            Ok(i) => i,
+            Err(_) => "Can Not Preview".to_string(),
+        };
         let preview =
-            Paragraph::new("Preview").block(Block::default().borders(Borders::ALL).title("Child"));
+            Paragraph::new(contents).block(Block::default().borders(Borders::ALL).title("Child"));
         f.render_widget(preview, area);
     }
 }

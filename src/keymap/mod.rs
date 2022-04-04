@@ -26,8 +26,10 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                             + "/"
                                             + &app.popup.message.clone();
                                     debug!("{create_dir_name}");
-                                    fs::create_dir(create_dir_name).unwrap();
-                                    app.current.node.set_tc();
+                                    match fs::create_dir(create_dir_name) {
+                                        Ok(_) => app.current.node.set_tc(),
+                                        Err(e) => debug!("{}", e),
+                                    }
                                 }
                                 //输入几个字符去匹配
                                 Poptype::Search => {
@@ -44,12 +46,13 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                 }
                                 Poptype::Delete => {
                                     if app.popup.message.clone() == "Y" {
-                                        std::fs::remove_dir_all(app.clone().get_item_path())
-                                            .unwrap();
-                                        debug!(
-                                            "you have delete {:#?}",
-                                            app.clone().which_is_selected()
-                                        );
+                                        match std::fs::remove_dir_all(app.clone().get_item_path()) {
+                                            Ok(_) => debug!(
+                                                "you have delete {:#?}",
+                                                app.clone().which_is_selected()
+                                            ),
+                                            Err(e) => debug!("{}", e),
+                                        }
                                         app.current.node.set_tc();
                                     } else if app.popup.message.clone() == "N" {
                                         app.popup.show_popup = false;
@@ -59,20 +62,21 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                 }
                                 Poptype::Rename => {
                                     let rename_name = app.popup.message.clone();
-                                    std::fs::rename(
+                                    match std::fs::rename(
                                         app.clone().get_item_path(),
                                         app.clone()
                                             .get_item_path()
                                             .parent()
-                                            .unwrap()
+                                            .expect("dont have the parent")
                                             .to_str()
-                                            .unwrap()
+                                            .expect("cant be str")
                                             .to_owned()
                                             + "/"
                                             + &rename_name,
-                                    )
-                                    .unwrap();
-                                    app.current.node.set_tc();
+                                    ) {
+                                        Ok(_) => app.current.node.set_tc(),
+                                        Err(e) => debug!("{}", e),
+                                    }
                                 }
                                 _ => {}
                             }
