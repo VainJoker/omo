@@ -1,6 +1,5 @@
-use log::{info, LevelFilter};
-
 use crate::{app::App, ui::run};
+use log::{info, LevelFilter};
 
 pub mod app;
 pub mod item;

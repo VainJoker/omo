@@ -1,4 +1,8 @@
-use std::{ffi::OsString, fs, io, path::Path};
+use std::{
+    ffi::OsString,
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 use crossterm::event::{self, Event, KeyCode};
 use log::debug;
@@ -20,13 +24,24 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                         KeyCode::Enter => {
                             app.popup.message = app.popup.input.clone();
                             match app.popup.poptype {
-                                Poptype::Create => {
+                                Poptype::CreateDir => {
                                     let create_dir_name =
                                         app.current.node.current_path.to_str().unwrap().to_owned()
-                                        + "/"
-                                        + &app.popup.message.clone();
+                                            + "/"
+                                            + &app.popup.message.clone();
                                     debug!("{create_dir_name}");
                                     match fs::create_dir(create_dir_name) {
+                                        Ok(_) => app.current.node.set_tc(),
+                                        Err(e) => debug!("{}", e),
+                                    }
+                                }
+                                Poptype::CreateFile => {
+                                    let create_file_name =
+                                        app.current.node.current_path.to_str().unwrap().to_owned()
+                                            + "/"
+                                            + &app.popup.message.clone();
+                                    debug!("{create_file_name}");
+                                    match fs::File::create(create_file_name) {
                                         Ok(_) => app.current.node.set_tc(),
                                         Err(e) => debug!("{}", e),
                                     }
@@ -49,12 +64,12 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                         if app.clone().get_item_path().is_dir() {
                                             match std::fs::remove_dir_all(
                                                 app.clone().get_item_path(),
-                                                ) {
+                                            ) {
                                                 Ok(_) => {
                                                     debug!(
                                                         "you have delete {:#?}",
                                                         app.clone().which_is_selected()
-                                                        );
+                                                    );
                                                     app.current.node.set_tc();
                                                 }
                                                 Err(e) => debug!("{}", e),
@@ -66,7 +81,7 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                                     debug!(
                                                         "you have delete {:#?}",
                                                         app.clone().which_is_selected()
-                                                        );
+                                                    );
                                                     app.current.node.set_tc();
                                                 }
                                                 Err(e) => debug!("{}", e),
@@ -83,15 +98,15 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                                     match std::fs::rename(
                                         app.clone().get_item_path(),
                                         app.clone()
-                                        .get_item_path()
-                                        .parent()
-                                        .expect("dont have the parent")
-                                        .to_str()
-                                        .expect("cant be str")
-                                        .to_owned()
-                                        + "/"
-                                        + &rename_name,
-                                        ) {
+                                            .get_item_path()
+                                            .parent()
+                                            .expect("dont have the parent")
+                                            .to_str()
+                                            .expect("cant be str")
+                                            .to_owned()
+                                            + "/"
+                                            + &rename_name,
+                                    ) {
                                         Ok(_) => app.current.node.set_tc(),
                                         Err(e) => debug!("{}", e),
                                     }
@@ -126,32 +141,62 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                     KeyCode::Char('+') => {
                         app.popup.message.clear();
                         app.popup.show_popup = !app.popup.show_popup;
-                        app.popup.poptype = Poptype::Create;
+                        app.popup.poptype = Poptype::CreateDir;
+                    }
+                    KeyCode::Char('N') => {
+                        app.popup.message.clear();
+                        app.popup.show_popup = !app.popup.show_popup;
+                        app.popup.poptype = Poptype::CreateFile;
                     }
                     KeyCode::Char('R') => {
                         app.popup.poptype = Poptype::Rename;
                         app.popup.show_popup = !app.popup.show_popup;
                     }
+                    KeyCode::Char('Y') => {
+                        // let copy_name = app
+                        //     .clone()
+                        //     .get_item_path()
+                        //     .to_owned();
+                        // app.popup.message = copy_name.to_str().unwrap().to_string();
+                        // debug!("{:#?}", app.popup.message);
+                    }
+                    KeyCode::Char('P') => {
+                        // debug!("{:#?}", app.popup.message);
+                        // let parse_name =
+                        //     app.clone().get_item_path().parent().unwrap().to_str().unwrap().to_owned()
+                        //     +"/"
+                        //     + PathBuf::from(app.popup.message.clone()).file_name().unwrap().to_str().unwrap();
+                        // debug!("{:#?}", parse_name);
+                        // std::fs::copy(app.popup.message.clone(), parse_name).unwrap();
+                    }
+                    //咋搞呢！！！？？？
+                    KeyCode::Char('S') => {
+                        // return Ok(());
+                    }
                     KeyCode::Char('h') => {
                         if app.current.node.current_path
                             != home::home_dir().expect("user's home_dir not found")
-                                || app.current.node.current_path == Path::new("/root")
-                                {
-                                    app = app.get_parapp();
-                                    debug!("Current Path is {:#?}", app.clone().get_item_path());
-                                }
+                            || app.current.node.current_path == Path::new("/root")
+                        {
+                            app = app.get_parapp();
+                            debug!("Current Path is {:#?}", app.clone().get_item_path());
+                            // debug!("{:?}", app.clone().get_item_path().metadata());
+                        }
                     }
                     KeyCode::Char('l') => {
                         app = app.get_chiapp();
                         debug!("Current Path is {:#?}", app.clone().get_item_path());
+                        // debug!("{:?}", app.clone().get_item_path().metadata());
                     }
                     KeyCode::Char('j') => {
                         app.current.next();
                         debug!("Current Path is {:#?}", app.clone().get_item_path());
+                        // debug!("{:?}", app.clone().get_item_path().metadata());
                     }
                     KeyCode::Char('k') => {
                         app.current.previous();
                         debug!("Current Path is {:#?}", app.clone().get_item_path());
+                        // debug!("{:?}", app.clone().get_item_path().metadata());
                     }
                     _ => {}
                 },

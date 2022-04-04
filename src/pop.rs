@@ -10,10 +10,11 @@ pub struct PopUp {
 #[derive(Clone, Debug)]
 pub enum Poptype {
     Search,
-    Create,
+    CreateDir,
     Delete,
     Rename,
     Init,
+    CreateFile,
 }
 
 impl Default for PopUp {
