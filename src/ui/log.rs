@@ -14,7 +14,7 @@ where
         .style_error(Style::default().fg(Color::Red))
         .style_debug(Style::default().fg(Color::Blue))
         .style_warn(Style::default().fg(Color::Yellow))
-        .style_trace(Style::default().fg(Color::Gray))
+        .style_trace(Style::default().fg(Color::DarkGray))
         .style_info(Style::default().fg(Color::Cyan))
         .block(Block::default().title("Logs").borders(Borders::ALL));
     f.render_widget(log, area);

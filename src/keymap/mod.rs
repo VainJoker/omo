@@ -1,14 +1,15 @@
-use std::{
-    ffi::OsString,
-    fs, io,
-    path::Path,
-};
+use std::{ffi::OsString, fs, io, path::Path};
 
 use crossterm::event::{self, Event, KeyCode};
-use log::debug;
+use log::{debug, info};
 use tui::{backend::Backend, Terminal};
 
-use crate::{app::App, pop::Poptype, ui::draw};
+use crate::{
+    app::App,
+    pop::Poptype,
+    ui::draw,
+    util::{get_item_len, show_item_size},
+};
 //按键绑定
 pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()> {
     let mut app = app.clone();
@@ -179,24 +180,28 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                             || app.current.node.current_path == Path::new("/root")
                         {
                             app = app.get_parapp();
-                            debug!("Current Path is {:#?}", app.clone().get_item_path());
-                            // debug!("{:?}", app.clone().get_item_path().metadata());
+                            info!(target:"","Current Path is {:#?} && Size is \"{}\"",
+                              app.clone().get_item_path(),
+                              show_item_size(get_item_len(app.clone().get_item_path())));
                         }
                     }
                     KeyCode::Char('l') => {
                         app = app.get_chiapp();
-                        debug!("Current Path is {:#?}", app.clone().get_item_path());
-                        // debug!("{:?}", app.clone().get_item_path().metadata());
+                        info!(target:"","Current Path is {:#?} && Size is \"{}\"",
+                              app.clone().get_item_path(),
+                              show_item_size(get_item_len(app.clone().get_item_path())));
                     }
                     KeyCode::Char('j') => {
                         app.current.next();
-                        debug!("Current Path is {:#?}", app.clone().get_item_path());
-                        // debug!("{:?}", app.clone().get_item_path().metadata());
+                        info!(target:"","Current Path is {:#?} && Size is \"{}\"",
+                              app.clone().get_item_path(),
+                              show_item_size(get_item_len(app.clone().get_item_path())));
                     }
                     KeyCode::Char('k') => {
                         app.current.previous();
-                        debug!("Current Path is {:#?}", app.clone().get_item_path());
-                        // debug!("{:?}", app.clone().get_item_path().metadata());
+                        info!(target:"","Current Path is {:#?} && Size is \"{}\"",
+                              app.clone().get_item_path(),
+                              show_item_size(get_item_len(app.clone().get_item_path())));
                     }
                     _ => {}
                 },

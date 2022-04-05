@@ -12,10 +12,10 @@ crossterm = "*"
 home = "0.5.3"
 log = "*"
 tui-logger = "*"
-# cmd_lib = "*"
-# tokio = {version = "*",features = ["full"]}
 unicode-segmentation = "1.2"
 unicode-width = "0.1"
+# cmd_lib = "*"
+# tokio = {version = "*",features = ["full"]}
 
 [profile.release]
 opt-level = 'z'
