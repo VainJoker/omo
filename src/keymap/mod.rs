@@ -118,10 +118,10 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                             app.popup.message.clear();
                             app.popup.show_popup = false;
                             info!(target:"","Current Path is {:#?} && Size is \"{}\" && Permissions is \"{:.o}\"",
-                                  app.clone().get_item_path(),
-                                  show_item_size(get_item_len(app.clone().get_item_path())),
-                                  app.clone().get_item_path().metadata().unwrap().permissions().mode()
-                                 );
+                             app.clone().get_item_path(),
+                             show_item_size(get_item_len(app.clone().get_item_path())),
+                             app.clone().get_item_path().metadata().unwrap().permissions().mode()
+                            );
                         }
                         KeyCode::Char(c) => {
                             app.popup.input.push(c);
@@ -175,46 +175,31 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                         // debug!("{:#?}", parse_name);
                         // std::fs::copy(app.popup.message.clone(), parse_name).unwrap();
                     }
-                    //咋搞呢！！！？？？
+                    //TODO:改变目录
                     KeyCode::Char('S') => {
                         // return Ok(());
+                    }
+                    //TODO:打开文件
+                    KeyCode::Enter => {
+                        // return Ok(());
+                        // open_file(app.clone().get_item_path());
                     }
                     KeyCode::Char('h') => {
                         if app.current.node.current_path
                             != home::home_dir().expect("user's home_dir not found")
-                                || app.current.node.current_path == Path::new("/root")
-                                {
-                                    app = app.get_parapp();
-                                    info!(target:"","Current Path is {:#?} && Size is \"{}\" && Permissions is \"{:.o}\"",
-                                          app.clone().get_item_path(),
-                                          show_item_size(get_item_len(app.clone().get_item_path())),
-                                          app.clone().get_item_path().metadata().unwrap().permissions().mode()
-                                         );
-                                }
+                            || app.current.node.current_path == Path::new("/root")
+                        {
+                            app = app.get_parapp();
+                        }
                     }
                     KeyCode::Char('l') => {
                         app = app.get_chiapp();
-                        info!(target:"","Current Path is {:#?} && Size is \"{}\" && Permissions is \"{:.o}\"",
-                              app.clone().get_item_path(),
-                              show_item_size(get_item_len(app.clone().get_item_path())),
-                              app.clone().get_item_path().metadata().unwrap().permissions().mode()
-                             );
                     }
                     KeyCode::Char('j') => {
                         app.current.next();
-                        info!(target:"","Current Path is {:#?} && Size is \"{}\" && Permissions is \"{:.o}\"",
-                              app.clone().get_item_path(),
-                              show_item_size(get_item_len(app.clone().get_item_path())),
-                              app.clone().get_item_path().metadata().unwrap().permissions().mode()
-                             );
                     }
                     KeyCode::Char('k') => {
                         app.current.previous();
-                        info!(target:"","Current Path is {:#?} && Size is \"{}\" && Permissions is \"{:.o}\"",
-                              app.clone().get_item_path(),
-                              show_item_size(get_item_len(app.clone().get_item_path())),
-                              app.clone().get_item_path().metadata().unwrap().permissions().mode()
-                             );
                     }
                     _ => {}
                 },
@@ -222,3 +207,4 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
         }
     }
 }
+

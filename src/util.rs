@@ -52,8 +52,14 @@ pub fn get_child_content(path: PathBuf) -> Vec<OsString> {
 
 pub fn get_item_len(pb: PathBuf) -> f32 {
     if Path::is_file(&pb) {
-        let metadata = pb.metadata().unwrap();
-        return metadata.len() as f32;
+        match pb.metadata() {
+            Ok(metadata) => {
+                let size = metadata.len();
+                let size = size as f32;
+                size / 1024.0
+            }
+            Err(_) => 0.0,
+        }
     } else if Path::is_dir(&pb) {
         let walker = WalkDir::new(&pb).min_depth(1).into_iter();
         let mut len: f32 = 0.0;
@@ -61,7 +67,15 @@ pub fn get_item_len(pb: PathBuf) -> f32 {
             match entry {
                 Ok(entry) => {
                     let content = entry;
-                    len += content.path().to_path_buf().metadata().unwrap().len() as f32;
+                    let content_len = match content.path().to_path_buf().metadata() {
+                        Ok(metadata) => {
+                            let size = metadata.len();
+                            let size = size as f32;
+                            size / 1024.0
+                        }
+                        Err(_) => 0.0,
+                    };
+                    len += content_len;
                 }
                 Err(_) => {}
             };
