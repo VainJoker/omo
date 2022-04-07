@@ -76,8 +76,7 @@ impl App {
     //对于当前路径，非根，父路径有且仅有一个,然而父目录的兄弟目录都需要读取,所以设置node的toparent（tp）这个BTreeMap为一个string对应一个vec
     //至于子目录，是一个多对多的关系，当前路径下有许多文件夹，许多的item,我需要把所有item的子文件夹存起来，所以设置node的tochild（tc）这个BTreeMap为一个vec对应一个vec
     //因为这导致当存在许多的条目时，会造成略微卡顿情况
-    //todo!需要处理
-
+//TODO:这里需要改进
     //获取被选中的条目
     pub fn which_is_selected(self) -> PathBuf {
         let items: Vec<OsString> = self.current.node.tc.into_keys().collect();
