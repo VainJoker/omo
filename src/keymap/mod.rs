@@ -181,6 +181,11 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
                     }
                     //TODO:打开文件
                     KeyCode::Enter => {
+                        //suspend
+                        // match std::process::Command::new("bash").arg("-c").arg("suspend").spawn(){
+                        //     Ok(_) => debug!("you have suspend"),
+                        //     Err(e) => debug!("{}", e),
+                        // }
                         // return Ok(());
                         // open_file(app.clone().get_item_path());
                     }
@@ -207,4 +212,3 @@ pub fn keymap<B: Backend>(terminal: &mut Terminal<B>, app: App) -> io::Result<()
         }
     }
 }
-
